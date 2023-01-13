@@ -337,25 +337,17 @@ func (a Artifact) uncompressedLayer(diffID string) (string, io.Reader, error) {
 
 	// digest is a hash of the compressed layer
 	var digest string
-	if a.isCompressed(layer) {
-		d, err := layer.Digest()
-		if err != nil {
-			return "", nil, xerrors.Errorf("failed to get the digest (%s): %w", diffID, err)
-		}
-		digest = d.String()
+	d, err := layer.Digest()
+	if err != nil {
+		return "", nil, xerrors.Errorf("failed to get the digest (%s): %w", diffID, err)
 	}
+	digest = d.String()
 
 	r, err := layer.Uncompressed()
 	if err != nil {
 		return "", nil, xerrors.Errorf("failed to get the layer content (%s): %w", diffID, err)
 	}
-	if digest == "" {
-		d, err := layer.Digest()
-		if err != nil {
-			return "", nil, xerrors.Errorf("failed to get the digest (%s): %w", diffID, err)
-		}
-		digest = d.String()
-	}
+
 	return digest, r, nil
 }
 
