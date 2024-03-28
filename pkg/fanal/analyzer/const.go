@@ -245,4 +245,6 @@ var (
 		TypeTerraformPlanJSON,
 		TypeTerraformPlanSnapshot,
 	}
+
+	BinCatalogerName = "binary-classifier-cataloger"
 )

@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	syft_pkg "github.com/anchore/syft/syft/pkg"
 	"strings"
 
 	"github.com/package-url/packageurl-go"
@@ -195,6 +196,9 @@ type Package struct {
 
 	// Files installed by the package
 	InstalledFiles []string `json:",omitempty"`
+	Type string `json:",omitempty"`
+	SyftPackage *syft_pkg.Package
+
 }
 
 func (pkg *Package) Empty() bool {

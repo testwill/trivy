@@ -5,9 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"path"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/adrg/xdg"
+
+	"github.com/anchore/grype/grype/matcher/stock"
+
+	db2 "github.com/anchore/grype/grype/db"
+	grpye_pkg "github.com/anchore/grype/grype/pkg"
+	"github.com/aquasecurity/trivy/pkg/grypedb"
 
 	"github.com/google/wire"
 	"github.com/samber/lo"
@@ -181,6 +190,13 @@ func (s Scanner) scanVulnerabilities(ctx context.Context, target types.ScanTarge
 		results = append(results, vulns...)
 	}
 
+	binResult, err := s.scanGrypePkgs(target, options)
+	if err != nil {
+		return nil, false, xerrors.Errorf("failed to scan binaries: %w", err)
+	} else if binResult != nil {
+		results = append(results, *binResult)
+	}
+
 	return results, eosl, nil
 }
 
@@ -332,6 +348,87 @@ func (s Scanner) scanLicenses(target types.ScanTarget, options types.ScanOptions
 	})
 
 	return results
+}
+
+func (s Scanner) scanGrypePkgs(target types.ScanTarget, options types.ScanOptions) (
+	*types.Result, error) {
+	var vulns []types.DetectedVulnerability
+
+	log.Info("grype detect vulns")
+
+	pkgs := target.Packages
+
+	// get a grype DB
+	str, _, closer, err := grypedb.LoadVulnerabilityDB(db2.Config{
+		DBRootDir:           path.Join(xdg.CacheHome, "grype", "db"),
+		ListingURL:          "",
+		ValidateByHashOnGet: false,
+	})
+
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	if closer != nil {
+		defer closer.Close()
+	}
+
+	matcher := stock.NewStockMatcher(stock.MatcherConfig{UseCPEs: true})
+	for _, pkg := range pkgs {
+		if pkg.Type != analyzer.BinCatalogerName {
+			continue
+		}
+		gpkg := grpye_pkg.New(*pkg.SyftPackage)
+		matchArr, err := matcher.Match(str, nil, gpkg)
+		if err != nil {
+			log.Error(err.Error())
+			continue
+		}
+		if len(matchArr) == 0 {
+			continue
+		}
+		for _, match := range matchArr {
+			grypeVuln := match.Vulnerability
+			vuln := types.DetectedVulnerability{
+				VulnerabilityID:  grypeVuln.ID,
+				VendorIDs:        nil,
+				PkgID:            pkg.ID,
+				PkgName:          pkg.Name,
+				PkgPath:          pkg.FilePath,
+				InstalledVersion: pkg.Version,
+				Layer:            pkg.Layer,
+				PrimaryURL:       "",
+				DataSource:       nil,
+				Custom:           nil,
+				Vulnerability:    dbTypes.Vulnerability{},
+			}
+			if len(grypeVuln.Fix.Versions) > 0 {
+				vuln.FixedVersion = grypeVuln.Fix.Versions[0]
+			}
+			if len(grypeVuln.Namespace) > 0 {
+				splitStr := strings.Split(grypeVuln.Namespace, ":")
+				vuln.SeveritySource = dbTypes.SourceID(splitStr[0])
+			}
+			if len(grypeVuln.Advisories) > 0 {
+				vuln.DataSource = &dbTypes.DataSource{
+					ID:   dbTypes.SourceID(grypeVuln.Advisories[0].ID),
+					Name: "",
+					URL:  grypeVuln.Advisories[0].Link,
+				}
+			}
+			vulns = append(vulns, vuln)
+		}
+
+	}
+	artifactDetail := fmt.Sprintf("%s (%s %s)", target.Name, target.OS.Family, target.OS.Name)
+	result := &types.Result{
+		Target:          artifactDetail,
+		Vulnerabilities: vulns,
+		Class:           types.ClassOSPkg,
+		Type:            target.OS.Family,
+	}
+	return result, nil
 }
 
 func toDetectedMisconfiguration(res ftypes.MisconfResult, defaultSeverity dbTypes.Severity,
