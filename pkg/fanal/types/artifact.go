@@ -6,6 +6,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/samber/lo"
 
+	syft_pkg "github.com/anchore/syft/syft/pkg"
 	"github.com/aquasecurity/trivy/pkg/digest"
 	aos "github.com/aquasecurity/trivy/pkg/fanal/analyzer/os"
 )
@@ -96,7 +97,9 @@ type Package struct {
 	Digest digest.Digest `json:",omitempty"`
 
 	// lines from the lock file where the dependency is written
-	Locations []Location `json:",omitempty"`
+	Locations   []Location `json:",omitempty"`
+	Type        string     `json:",omitempty"`
+	SyftPackage *syft_pkg.Package
 }
 
 type Location struct {

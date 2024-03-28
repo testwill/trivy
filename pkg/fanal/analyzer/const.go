@@ -223,4 +223,6 @@ var (
 		TypeTerraform,
 		TypeTerraformPlan,
 	}
+
+	BinCatalogerName = "binary-classifier-cataloger"
 )

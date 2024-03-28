@@ -196,12 +196,14 @@ func (c *CycloneDX) BOMRef(component *Component) string {
 func (c *CycloneDX) Metadata() *cdx.Metadata {
 	return &cdx.Metadata{
 		Timestamp: c.clock.Now().UTC().Format(timeLayout),
-		Tools: &[]cdx.Tool{
-			{
+		Tools: &cdx.ToolsChoice{
+			Tools: &[]cdx.Tool{{
 				Vendor:  ToolVendor,
 				Name:    ToolName,
 				Version: c.appVersion,
-			},
+			}},
+			Components: nil,
+			Services:   nil,
 		},
 	}
 }
@@ -321,7 +323,7 @@ func IsTrivySBOM(c *cdx.BOM) bool {
 		return false
 	}
 
-	for _, tool := range *c.Metadata.Tools {
+	for _, tool := range *c.Metadata.Tools.Tools {
 		if tool.Vendor == ToolVendor && tool.Name == ToolName {
 			return true
 		}
