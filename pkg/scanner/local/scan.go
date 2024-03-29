@@ -421,20 +421,6 @@ func (s Scanner) scanGrypePkgs(target string, detail ftypes.ArtifactDetail, opti
 				Custom:           nil,
 				Vulnerability:    dbTypes.Vulnerability{},
 			}
-			if len(grypeVuln.Fix.Versions) > 0 {
-				vuln.FixedVersion = grypeVuln.Fix.Versions[0]
-			}
-			if len(grypeVuln.Namespace) > 0 {
-				splitStr := strings.Split(grypeVuln.Namespace, ":")
-				vuln.SeveritySource = dbTypes.SourceID(splitStr[0])
-			}
-			if len(grypeVuln.Advisories) > 0 {
-				vuln.DataSource = &dbTypes.DataSource{
-					ID:   dbTypes.SourceID(grypeVuln.Advisories[0].ID),
-					Name: "",
-					URL:  grypeVuln.Advisories[0].Link,
-				}
-			}
 			vulns = append(vulns, vuln)
 		}
 
