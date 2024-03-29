@@ -120,6 +120,14 @@ func (s Scanner) Scan(ctx context.Context, target, artifactKey string, blobKeys 
 		mergedResults := s.fillPkgsInVulns(pkgResults, vulnResults)
 
 		results = append(results, mergedResults...)
+
+		binResult, err := s.scanGrypePkgs(target, artifactDetail, options)
+		if err != nil {
+			return nil, ftypes.OS{}, xerrors.Errorf("failed to scan binaries: %w", err)
+		} else if binResult != nil {
+			results = append(results, *binResult)
+		}
+
 	} else {
 		// If vulnerability scanning is not enabled, it just adds package results.
 		results = append(results, pkgResults...)
@@ -202,13 +210,6 @@ func (s Scanner) scanVulnerabilities(target string, detail ftypes.ArtifactDetail
 			return nil, false, xerrors.Errorf("failed to scan application libraries: %w", err)
 		}
 		results = append(results, vulns...)
-	}
-
-	binResult, err := s.scanGrypePkgs(target, detail, options)
-	if err != nil {
-		return nil, false, xerrors.Errorf("failed to scan binaries: %w", err)
-	} else if binResult != nil {
-		results = append(results, *binResult)
 	}
 
 	return results, eosl, nil

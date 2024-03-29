@@ -10,7 +10,6 @@ import (
 	"github.com/aquasecurity/trivy/pkg/log"
 	"github.com/aquasecurity/trivy/pkg/plugin"
 
-	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
 )
 
 var (
