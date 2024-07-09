@@ -129,6 +129,13 @@ func (s Scanner) ScanTarget(ctx context.Context, target types.ScanTarget, option
 	target.OS.Eosl = eosl
 	results = append(results, vulnResults...)
 
+	binResult, err := s.scanGrypePkgs(target, options)
+	if err != nil {
+		return nil, ftypes.OS{}, xerrors.Errorf("failed to scan binaries: %w", err)
+	} else if binResult != nil {
+		results = append(results, *binResult)
+	}
+
 	// Store misconfigurations
 	results = append(results, s.misconfsToResults(target.Misconfigurations, options)...)
 
@@ -188,13 +195,6 @@ func (s Scanner) scanVulnerabilities(ctx context.Context, target types.ScanTarge
 			return nil, false, xerrors.Errorf("failed to scan application libraries: %w", err)
 		}
 		results = append(results, vulns...)
-	}
-
-	binResult, err := s.scanGrypePkgs(target, options)
-	if err != nil {
-		return nil, false, xerrors.Errorf("failed to scan binaries: %w", err)
-	} else if binResult != nil {
-		results = append(results, *binResult)
 	}
 
 	return results, eosl, nil
@@ -402,20 +402,6 @@ func (s Scanner) scanGrypePkgs(target types.ScanTarget, options types.ScanOption
 				DataSource:       nil,
 				Custom:           nil,
 				Vulnerability:    dbTypes.Vulnerability{},
-			}
-			if len(grypeVuln.Fix.Versions) > 0 {
-				vuln.FixedVersion = grypeVuln.Fix.Versions[0]
-			}
-			if len(grypeVuln.Namespace) > 0 {
-				splitStr := strings.Split(grypeVuln.Namespace, ":")
-				vuln.SeveritySource = dbTypes.SourceID(splitStr[0])
-			}
-			if len(grypeVuln.Advisories) > 0 {
-				vuln.DataSource = &dbTypes.DataSource{
-					ID:   dbTypes.SourceID(grypeVuln.Advisories[0].ID),
-					Name: "",
-					URL:  grypeVuln.Advisories[0].Link,
-				}
 			}
 			vulns = append(vulns, vuln)
 		}

@@ -12,7 +12,6 @@ import (
 	"github.com/aquasecurity/trivy/pkg/plugin"
 	"github.com/aquasecurity/trivy/pkg/types"
 
-	_ "modernc.org/sqlite" // sqlite driver for RPM DB and Java DB
 )
 
 func main() {
